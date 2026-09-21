@@ -1,0 +1,441 @@
+package gg.crystalized.lobby;
+
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
+import gg.crystalized.lobby.statistics.StatView;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.CustomModelData;
+import io.papermc.paper.entity.TeleportFlag;
+import net.kyori.adventure.text.Component;
+import org.bukkit.*;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
+
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.function.Consumer;
+
+import static gg.crystalized.lobby.Quest.setQuests;
+import static java.util.Arrays.stream;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
+import static net.kyori.adventure.text.format.TextDecoration.ITALIC;
+
+public enum App {
+    Litestrike("ui/scn3/games/litestrike", useCases.Games, new useCases[]{useCases.Navigator},Component.translatable("crystalized.game.litestrike.name").color(GREEN).decoration(ITALIC, false), 29, LobbyConfig.Locations.get("litestrike_hub")),
+    Knockoff("ui/scn3/games/knockoff", useCases.Games, new useCases[]{useCases.Navigator},Component.translatable("crystalized.game.knockoff.name").color(GOLD).decoration(ITALIC, false), 30, LobbyConfig.Locations.get("knockoff_hub")),
+    Crystalblitz("ui/scn3/games/crystalblitz", useCases.Games, new useCases[]{useCases.Navigator},Component.translatable("crystalized.game.crystalblitz.name").color(LIGHT_PURPLE).decoration(ITALIC, false), 31,  LobbyConfig.Locations.get("crystalblitz_hub")),
+    Navigator( "ui/scn3/games", useCases.Navigator, new useCases[]{useCases.Menu, useCases.Hotbar},Component.translatable("crystalized.shardcore.games.name").color(WHITE).decoration(ITALIC, false), 29,
+            "\uA000\uA006"),
+    Profiles("ui/scn3/profile", useCases.Profiles, new useCases[]{useCases.Menu}, Component.translatable("crystalized.shardcore.profile.name").color(WHITE).decoration(ITALIC, false), 24,
+            "\uA000\uA008"),
+    Friends("ui/scn3/friends", useCases.Friends, new useCases[]{useCases.Menu, useCases.Hotbar}, Component.translatable("crystalized.shardcore.party.name").color(WHITE).decoration(ITALIC, false), 30,
+            "\uA000\uA005"),
+    Maps("ui/scn3/maps", useCases.Map, new useCases[]{useCases.Menu, useCases.Hotbar}, Component.translatable("crystalized.shardcore.maps.name").color(WHITE).decoration(ITALIC, false), 31,
+            "\uA000"), //TODO + inv
+    Settings("ui/scn3/settings", useCases.Settings, new useCases[]{useCases.Menu}, Component.translatable("crystalized.shardcore.settings.name").color(WHITE).decoration(ITALIC, false), 20,
+              "\uA000\uA009"),
+    Achieve("ui/scn3/achivements", useCases.Achievements, new useCases[]{useCases.Menu}, Component.translatable("crystalized.shardcore.achivements.name").color(WHITE).decoration(ITALIC, false), 32,
+            "\uA000\uA011"),
+    AchieveGeneralCategory("ui/scn3/achivements/category_general", useCases.AchievementsPage, new useCases[]{useCases.Achievements}, Component.translatable("crystalized.achievement.category.general").decoration(ITALIC, false), 29, Achievement.achievementCategories.general),
+    AchieveLsCategory("ui/scn3/games/litestrike", useCases.AchievementsPage, new useCases[]{useCases.Achievements}, Component.translatable("crystalized.achievement.category.ls").decoration(ITALIC, false), 30, Achievement.achievementCategories.ls),
+    AchieveKoCategory("ui/scn3/games/knockoff", useCases.AchievementsPage, new useCases[]{useCases.Achievements}, Component.translatable("crystalized.achievement.category.ko").decoration(ITALIC, false), 31, Achievement.achievementCategories.ko),
+    AchieveCbCategory("ui/scn3/games/crystalblitz", useCases.AchievementsPage, new useCases[]{useCases.Achievements}, Component.translatable("crystalized.achievement.category.cb").decoration(ITALIC, false), 32, Achievement.achievementCategories.cb),
+    Quest("ui/scn3/quests", useCases.Quests, new useCases[]{useCases.Menu, useCases.Hotbar}, Component.translatable("crystalized.shardcore.quests.name").color(WHITE).decoration(ITALIC, false), 33,
+            "\uA000\uA014"),
+    Shop("ui/scn3/shop", useCases.Shop, new useCases[]{useCases.Menu}, Component.translatable("crystalized.shardcore.shop.name").color(WHITE).decoration(ITALIC, false), 38,
+            "\uA000\uA004"),
+    Wardrobe("ui/scn3/wardrobe", useCases.Wardrobe, new useCases[]{useCases.Menu}, Component.translatable("crystalized.shardcore.wardrobe.name").color(WHITE).decoration(ITALIC, false), 39,
+            "\uA000\uA00F"),
+    HatsButton("ui/invisible", useCases.ShopPage, useCases.Shop, Component.translatable("crystalized.shardcore.shop.hats").color(WHITE).decoration(ITALIC, false), new int[]{28, 4, 1},
+            EquipmentSlot.HEAD),
+    HandButton("ui/invisible", useCases.ShopPage, useCases.Shop, Component.translatable("crystalized.shardcore.shop.handheld").color(WHITE).decoration(ITALIC, false), new int[]{37, 4, 2},
+            EquipmentSlot.OFF_HAND),
+    WebButton("ui/invisible", useCases.ShopPage, useCases.Shop, Component.translatable("crystalized.shardcore.shop.webstore").color(WHITE).decoration(ITALIC, false), new int[]{32, 3, 1},
+            "put URL to Website here"), //TODO
+    ShardButton("ui/invisible", useCases.ShopPage, useCases.Shop, Component.translatable("crystalized.shardcore.shop.scn3").color(WHITE).decoration(ITALIC, false), new int[]{41, 3, 2},
+            EquipmentSlot.HAND),
+    ScrollLeft("ui/invisible", useCases.UI, Component.translatable("crystalized.shardcore.generic.scrollleft").color(WHITE).decoration(ITALIC, false), null),
+    ScrollRight("ui/invisible", useCases.UI, Component.translatable("crystalized.shardcore.generic.scrollright").color(WHITE).decoration(ITALIC, false), null),
+    ScrollUp("ui/invisible", useCases.UI, Component.translatable("crystalized.shardcore.generic.scrollup").color(WHITE).decoration(ITALIC, false), null),
+    ScrollDown("ui/invisible", useCases.UI, Component.translatable("crystalized.shardcore.generic.scrolldown").color(WHITE).decoration(ITALIC, false), null),
+    Back("ui/invisible", useCases.UI, Component.translatable("crystalized.shardcore.generic.back").color(WHITE).decoration(ITALIC, false), null),
+    Home("ui/invisible", useCases.UI, Component.translatable("crystalized.shardcore.generic.home").color(WHITE).decoration(ITALIC, false), null),
+    Requeue("ui/replay", useCases.Demand, Component.translatable("crystalized.game.generic.requeue").color(WHITE).decoration(ITALIC, false), 7),
+    BackToHub("ui/leave", useCases.Demand, Component.translatable("crystalized.game.generic.to_lobby").color(WHITE).decoration(ITALIC, false), 8),
+    MsgSetting("ui/scn3/settings/msg", useCases.Set, new useCases[]{useCases.Settings}, Component.translatable("crystalized.shardcore.settings.direct_messages").color(WHITE).decoration(ITALIC, false), 30, "dms"),
+    FriendRequestSetting("ui/scn3/settings/friend_requests", useCases.Set, new useCases[]{useCases.Settings}, Component.translatable("crystalized.shardcore.settings.friend_requests").color(WHITE).decoration(ITALIC, false), 39, "friends_requests"),
+    PartyRequestSetting("ui/scn3/settings/party_requests", useCases.Set, new useCases[]{useCases.Settings}, Component.translatable("crystalized.shardcore.settings.party_invites").color(WHITE).decoration(ITALIC, false), 48, "party_requests"),
+    PigHuntSetting("ui/scn3/settings/pig_hunt", useCases.Set, new useCases[]{useCases.Settings}, Component.translatable("crystalized.shardcore.settings.pig_hunt").color(WHITE).decoration(ITALIC, false), 41, "pig_game"),
+    PlayerHeightSetting("ui/scn3/settings/player_height", useCases.Set, new useCases[]{useCases.Settings}, Component.translatable("crystalized.shardcore.settings.player_height").color(WHITE).decoration(ITALIC, false), 50, "height"),
+    PlayerVisibilitySetting("ui/scn3/settings/player_visibility", useCases.Set, new useCases[]{useCases.Settings}, Component.translatable("crystalized.shardcore.settings.show_others").color(WHITE).decoration(ITALIC, false), 32, "show_players"),
+    SettingsToggleOff("ui/scn3/settings/toggle_off", useCases.Set, new useCases[]{useCases.Demand}, Component.translatable("crystalized.shardcore.settings.generic.off").color(RED).decoration(ITALIC, false), 0,0),
+    SettingsToggleOn("ui/scn3/settings/toggle_on", useCases.Set, new useCases[]{useCases.Demand}, Component.translatable("crystalized.shardcore.settings.generic.on").color(GREEN).decoration(ITALIC, false), 0, 1),
+    SettingsToggleMid("ui/scn3/settings/toggle_mid", useCases.Set, new useCases[]{useCases.Demand}, Component.translatable("crystalized.shardcore.settings.generic.mid").color(YELLOW).decoration(ITALIC, false), 0, 0.5),
+    ProfileScrollRight("ui/scn3/profile/info/right", useCases.Profiles, Component.translatable("crystalized.shardcore.generic.scrollright").color(WHITE).decoration(ITALIC, false), 21),
+    ProfileScrollLeft("ui/scn3/profile/info/left", useCases.Profiles, Component.translatable("crystalized.shardcore.generic.scrollleft").color(WHITE).decoration(ITALIC, false), 24),
+    ProfileLsStats("ui/scn3/profile/info/ls",useCases.Demand, new useCases[]{useCases.Stats}, Component.translatable("crystalized.shardcore.profile.info.ls").color(WHITE).decoration(ITALIC, false), 0, "ls"),
+    ProfileKoStats("ui/scn3/profile/info/ko", useCases.Demand, new useCases[]{useCases.Stats}, Component.translatable("crystalized.shardcore.profile.info.ko").color(WHITE).decoration(ITALIC, false), 0, "ko"),
+    ProfileCbStats("ui/scn3/profile/info/cb", useCases.Demand, new useCases[]{useCases.Stats}, Component.translatable("crystalized.shardcore.profile.info.cb").color(WHITE).decoration(ITALIC, false), 0, "cb"),
+    LeaveWardrobe("ui/leave", useCases.Wardrobe, Component.translatable("crystalized.generic.leave").color(WHITE).decoration(ITALIC, false), 9),
+    EquipBuy("", useCases.Wardrobe, Component.translatable("crystalized.shardcore.wardrobe.buy").color(WHITE).decoration(ITALIC, false), 8), //TODO model
+    HatsButtonW("ui/invisible", useCases.WardrobePage, useCases.Wardrobe, Component.translatable("crystalized.shardcore.shop.hats").color(WHITE).decoration(ITALIC, false), new int[]{28, 7, 1},
+    EquipmentSlot.HEAD),
+    HandButtonW("ui/invisible", useCases.WardrobePage, useCases.Wardrobe, Component.translatable("crystalized.shardcore.shop.handheld").color(WHITE).decoration(ITALIC, false), new int[]{37, 7, 1},
+            EquipmentSlot.OFF_HAND),
+    ShardButtonW("ui/invisible", useCases.WardrobePage, useCases.Wardrobe, Component.translatable("crystalized.shardcore.shop.scn3").color(WHITE).decoration(ITALIC, false), new int[]{46, 7, 1},
+    EquipmentSlot.HAND),
+    AddFriend("ui/scn3/profile/addfriend", useCases.Profiles, Component.translatable("crystalized.shardcore.party.addfriend").color(WHITE).decoration(ITALIC, false), 23),
+    AddToParty("ui/scn3/profile/addtoparty", useCases.Profiles, Component.translatable("crystalized.shardcore.party.add2party").color(WHITE).decoration(ITALIC, false), 24),
+    ToggleFlight_true("", useCases.Demand, Component.translatable("true").color(WHITE).decoration(ITALIC, false), 0),
+    ToggleFlight_false("", useCases.Demand, Component.translatable("false").color(WHITE).decoration(ITALIC, false), 0);
+
+
+    //how buttons work {top left corner, width, height}
+    enum useCases{
+        Navigator,
+        Games,
+        Menu,
+        Shop,
+        ShopPage,
+        Profiles,
+        Friends,
+        Map,
+        Settings,
+        Set,
+        Achievements,
+        AchievementsPage,
+        Quests,
+        Hotbar,
+        UI,
+        Wardrobe,
+        WardrobePage,
+        Demand,
+        Stats
+    }
+    final String model;
+    useCases self;
+    useCases[] uses;
+    useCases use;
+    final Component name;
+    public Integer slot;
+    int[] slots;
+    Object extra;
+    static final HashMap<OfflinePlayer, ArrayList<App>> active = new HashMap<>();
+
+    App(String model,useCases self ,useCases[] uses, Component name, Integer slot, Object extra){
+        this.model = model;
+        this.self = self;
+        this.uses = uses;
+        this.name = name;
+        this.slot = slot;
+        this.extra = extra;
+    }
+
+    App(String model,useCases self ,useCases use, Component name, int[] slots, Object extra){
+        this.model = model;
+        this.self = self;
+        this.use = use;
+        this.name = name;
+        this.slots = slots;
+        this.extra = extra;
+    }
+
+    App(String model, useCases[] uses, Component name, Integer slot){
+        this.model = model;
+        this.uses = uses;
+        this.name = name;
+        this.slot = slot;
+    }
+
+    App(String model, useCases use, Component name, Integer slot){
+        this.model = model;
+        this.use = use;
+        this.name = name;
+        this.slot = slot;
+    }
+    public static void buildApps(Inventory inv, useCases use, Player p){
+        for(App app : App.values()){
+            if(app.uses == null){
+                continue;
+            }
+            if(Arrays.asList(app.uses).contains(use)){
+                inv.setItem(app.slot, Setting.addDescription(app, p));
+                Setting.placeToggle(p, app, inv);
+            }
+        }
+    }
+
+    public ItemStack build(OfflinePlayer p){
+        ItemStack i = new ItemStack(Material.COAL);
+        ItemMeta meta = i.getItemMeta();
+        meta.setItemModel(new NamespacedKey("crystalized", model));
+        meta.displayName(name);
+        i.setItemMeta(meta);
+        if(active.get(p) != null && active.get(p).contains(this)) i.setData(DataComponentTypes.CUSTOM_MODEL_DATA, CustomModelData.customModelData().addFloat(2).build());
+        this.addPDC(i);
+        return i;
+    }
+
+    public ItemStack build(){
+        ItemStack i = new ItemStack(Material.COAL);
+        ItemMeta meta = i.getItemMeta();
+        meta.setItemModel(new NamespacedKey("crystalized", model));
+        meta.displayName(name);
+        i.setItemMeta(meta);
+        this.addPDC(i);
+        return i;
+    }
+
+    private void addPDC(ItemStack item){
+        NamespacedKey key = new NamespacedKey("crystalized", "app");
+        String s;
+        if(this == Litestrike){
+            s = "litestrike";
+        }else if(this == Knockoff){
+            s = "knockoff";
+        }else if(this == Crystalblitz){
+            s = "crystalblitz";
+        } else {
+            s = "";
+        }
+        Consumer<PersistentDataContainer> c = pdc -> pdc.set(key, PersistentDataType.STRING, s);
+        item.editPersistentDataContainer(c);
+    }
+
+    public static App identifyApp(ItemStack item, Player p){
+        App app = null;
+        for(App a : App.values()){
+            if(a.build().equals(item) || a.build(p).equals(item)){
+                app = a;
+                break;
+            }
+        }
+        return app;
+    }
+
+    public static Inventory prepareInv(String name, int slots, useCases use, Player p){
+        Inventory inv = Bukkit.getServer().createInventory(null, slots, Component.text(name).color(WHITE));
+        UITemplates.createUI(inv, use);
+        buildApps(inv, use, p);
+        return inv;
+    }
+
+    public void activateApps(OfflinePlayer p){
+        if(active.get(p).contains(this)) return;
+        ArrayList<App> toAdd = new ArrayList<>();
+        active.get(p).add(this);
+        if(uses == null){
+            for(App app : App.values()){
+                if(app.self != null && app.use != null && app.self == use){
+                    toAdd.add(app);
+                }
+            }
+
+        }
+
+        for(App app : App.values()){
+            if(Arrays.asList(uses).contains(app.self)){
+                toAdd.add(app);
+            }
+        }
+
+        active.get(p).addAll(toAdd);
+
+        if(p.getPlayer() != null) {
+            InventoryManager.giveLobbyItems(p.getPlayer());
+        }
+    }
+
+    public void deactivateApps(OfflinePlayer p){
+        ArrayList<App> toRemove = new ArrayList<>();
+        active.get(p).remove(this);
+        if(uses == null){
+            for(App app : App.values()){
+                if(app.self != null && app.use != null && app.self == use){
+                    toRemove.add(app);
+                }
+            }
+            return;
+        }
+
+        for(App app : App.values()){
+            if(Arrays.asList(uses).contains(app.self)){
+                toRemove.add(app);
+            }
+        }
+
+        for(App a : toRemove){
+            active.get(p).remove(a);
+        }
+
+        if(p.getPlayer() != null) {
+            InventoryManager.giveLobbyItems(p.getPlayer());
+        }
+    }
+
+    public void action(Player p, OfflinePlayer viewed){
+        if(this.toString().contains("ToggleFlight")){
+            p.setAllowFlight(!p.getAllowFlight());
+            p.getInventory().setItem(8, this == ToggleFlight_true ? ToggleFlight_false.build() : ToggleFlight_true.build());
+        }
+        if(this == Requeue){
+            ArrayList<String> plugins = new ArrayList<>();
+            stream(Bukkit.getServer().getPluginManager().getPlugins()).forEach(pl -> plugins.add(pl.getName()));
+            String queue = null;
+            if(plugins.contains("Litestrike")){
+                queue = "litestrike";
+            }else if(plugins.contains("Knockoff")){
+                queue = "knockoff";
+            }else if(plugins.contains("Crystal_blitz")){
+                queue = "crystalblitz";
+            }
+
+            if(queue == null){
+                return;
+            }
+
+            ByteArrayDataOutput out = ByteStreams.newDataOutput();
+            out.writeUTF("Connect");
+            out.writeUTF(queue);
+            out.writeUTF("false");
+            p.sendPluginMessage(Lobby_plugin.getInstance(), "crystalized:main", out.toByteArray());
+            return;
+        }
+
+        if(this == BackToHub){
+            ByteArrayDataOutput out = ByteStreams.newDataOutput();
+            out.writeUTF("Connect");
+            out.writeUTF("lobby");
+            out.writeUTF("false");
+            p.sendPluginMessage(Lobby_plugin.getInstance(), "crystalized:main", out.toByteArray());
+        }
+        if(this == LeaveWardrobe){
+            CosmeticView.findView(p).endView();
+        }
+        if(this == EquipBuy){
+            CosmeticView.findView(p).equipOrBuy(p);
+        }
+        if(this == AddFriend){
+            ByteArrayDataOutput out = ByteStreams.newDataOutput();
+            out.writeUTF("Friend");
+            out.writeUTF(LobbyDatabase.areFriends(p, viewed) ? "remove" : "add");
+            out.writeUTF(viewed.getName());
+            p.sendPluginMessage(Lobby_plugin.getInstance(), "crystalized:main", out.toByteArray());
+        }
+        if(this == AddToParty){
+            ByteArrayDataOutput out = ByteStreams.newDataOutput();
+            out.writeUTF("Party");
+            out.writeUTF("invite");
+            out.writeUTF(viewed.getName());
+            p.sendPluginMessage(Lobby_plugin.getInstance(), "crystalized:main", out.toByteArray());
+        }
+        if(this.toString().contains("Stats")){
+            StatView.create(p, (String)extra).startPlayerView(p.getOpenInventory().getTopInventory().getItem(2));
+            return;
+        }
+        if(extra instanceof Location){
+            if(Lobby_plugin.getInstance().passive_mode){
+                ByteArrayDataOutput out = ByteStreams.newDataOutput();
+                out.writeUTF("Connect");
+                out.writeUTF(this.toString().toLowerCase());
+                out.writeUTF("true");
+                p.sendPluginMessage(Lobby_plugin.getInstance(), "crystalized:main", out.toByteArray());
+                return;
+            }
+            p.teleport((Location)extra, TeleportFlag.EntityState.RETAIN_PASSENGERS);
+        }
+        else if(extra instanceof String){
+            Inventory inv = prepareInv((String) extra, 54, self, p);
+            if(this == App.Friends){
+                FriendsMenu.placeFriends(p, inv);
+                ByteArrayDataOutput out = ByteStreams.newDataOutput();
+                out.writeUTF("Party");
+                out.writeUTF("members");
+                p.sendPluginMessage(Lobby_plugin.getInstance(), "crystalized:main", out.toByteArray());
+                FriendsMenu.waitingForPartyMembers.put(p, inv);
+                return;
+            }else if(this == App.Profiles){
+                Profile.prepareProfile(viewed, inv, p);
+            }else if(this == App.Wardrobe){
+                CosmeticView.getView(p).startView(null);
+            }else if(this == App.Quest){
+                setQuests(inv, p);
+            }
+            //else if(this == App.Achieve){Achievement.setAchievements(inv, viewed);}
+            p.openInventory(inv);
+        }
+        //no idea where this is supposed to go, work well here tho - Callum
+        else if (extra instanceof Achievement.achievementCategories category) {
+            String title = "\uA000\uA015"; //TODO different titles for different categories
+            Inventory inv = prepareInv(title, 54, self, p);
+            Achievement.setAchievements(inv, viewed, category);
+            p.openInventory(inv);
+        }
+    }
+
+    enum UITemplates{
+        normal(null, null, null, null, null, null),
+        shop(21, 23,null, null, null,20),
+        friends(21, 23, null, null, 20, null),
+        quests(null, null, null, null, 20, null),
+        settings(null, null, 29, 38, 47, null),
+        profile(null, null, null, null, 51, null);
+        final Integer scrollLeft;
+        final Integer scrollRight;
+        final Integer scrollUp;
+        final Integer scrollDown;
+        final Integer home;
+        final Integer goBack;
+        UITemplates(Integer scrollLeft, Integer scrollRight, Integer scrollUp, Integer scrollDown, Integer home, Integer goBack){
+            this.scrollLeft = scrollLeft;
+            this.scrollRight = scrollRight;
+            this.scrollUp = scrollUp;
+            this.scrollDown = scrollDown;
+            this.home = home;
+            this.goBack = goBack;
+        }
+
+        public static void createUI(Inventory inv, useCases use){
+            if(use == useCases.ShopPage || use == useCases.AchievementsPage){
+                shop.placeUI(inv);
+            }else if(use == useCases.Friends || use == useCases.Wardrobe){
+                friends.placeUI(inv);
+            }else if(use == useCases.Settings){
+                settings.placeUI(inv);
+            }else if(use == useCases.Profiles){
+                profile.placeUI(inv);
+            }else if(use == useCases.Quests || use == useCases.Achievements){
+                quests.placeUI(inv);
+            }else{
+                normal.placeUI(inv);
+            }
+        }
+        public void placeUI(Inventory inv){
+            if(scrollLeft != null){
+                inv.setItem(scrollLeft, App.ScrollLeft.build());
+            }
+            if(scrollRight != null){
+                inv.setItem(scrollRight, App.ScrollRight.build());
+            }
+            if(scrollUp != null){
+                inv.setItem(scrollUp, App.ScrollUp.build());
+            }
+            if(scrollDown != null){
+                inv.setItem(scrollDown, App.ScrollDown.build());
+            }
+            if(home != null){
+                inv.setItem(home, App.Home.build());
+            }
+            if(goBack != null){
+                inv.setItem(goBack, App.Back.build());
+            }
+        }
+    }
+}

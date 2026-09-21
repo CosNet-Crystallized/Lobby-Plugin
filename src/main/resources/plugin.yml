@@ -1,0 +1,59 @@
+name: Lobby_plugin
+version: 0.0.1
+main: gg.crystalized.lobby.Lobby_plugin
+api-version: '1.21.1'
+load: POSTWORLD
+
+softdepend: [Floodgate, Citizens]
+
+commands:
+  chess:
+    description: "Start a game of Chess!"
+    usage: "/chess [opponent player]"
+    aliases: []
+    permission: crystalized.lobby.chess
+    premission: "[!] You don't have permission to run this command, this is probably a bug"
+  pig_hunt:
+    description: "Spawn pig"
+    usage: "/pig_hunt"
+    aliases: ["ph"]
+    permission: crystalized.lobby.pig_hunt
+    premission: "[!] You don't have permission to run this command, this is probably a bug"
+  give_xp:
+    description: "gives xp"
+    usage: "/give_xp"
+    aliases: []
+    permission: crystalized.lobby.command
+  give_money:
+    description: "gives money"
+    usage: "/give_money"
+    aliases: []
+    permission: crystalized.lobby.command
+  set_rank:
+    description: "sets player rank"
+    usage: "/set_rank"
+    aliases: []
+    permission: crystalized.lobby.command
+  spawn:
+    description: "teleport back to spawn"
+    usage: "/spawn"
+    aliases: ["s"]
+    permission: crystalized.lobby.spawn
+    premission: "[!] You don't have permission to run this command, this is probably a bug"
+  reload_cosmetics:
+    description: "reload the cosmetics"
+    usage: "/reload_cosmetics"
+    aliases: []
+    permission: crystalized.lobby.command
+  reload_achievements:
+    description: "reload the achievements"
+    usage: "/reload_achievements"
+    aliases: []
+    permission: crystalized.lobby.command
+  give_cosmetic:
+    description: "gives cosmetic"
+    usage: "/give_cosmetic"
+    aliases: []
+    permission: crystalized.lobby.command
+
+

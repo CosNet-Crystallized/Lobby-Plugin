@@ -1,0 +1,215 @@
+package gg.crystalized.lobby;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import io.papermc.paper.entity.TeleportFlag;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Pig;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+
+
+public class Commands implements CommandExecutor {
+
+public static List<Pig> pig_trackerA = new ArrayList<Pig>();
+public static Map<Player, Integer> player_pig_counters = new HashMap<Player, Integer>();
+
+    @Override
+    public boolean onCommand(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String label,
+            @NotNull String[] args) {
+        switch (label) {
+            case "chess":
+                return run_chess(args, commandSender);
+            case "pig_hunt":
+            case "ph":
+                return run_pig_hunt(args, commandSender);
+            case "give_xp":
+                return give_xp(args, commandSender);
+            case "give_money":
+                return give_money(args, commandSender);
+            case "give_cosmetic":
+                return give_cosmetic(args, commandSender);
+            case "set_rank":
+                return set_rank(args, commandSender);
+            case "spawn":
+                return spawn(commandSender);
+            case "reload_cosmetics":
+                return reload_cosmetics(commandSender);
+            case "reload_achievements":
+                return reload_achievements(commandSender);
+            default:
+                return false;
+
+        }
+    }
+
+    private boolean run_pig_hunt(String[] args, CommandSender commandSender) {
+        Achievement.getAchievement("ko_unlocker", (OfflinePlayer) commandSender).setProgress(100);
+        /*if(Lobby_plugin.getInstance().passive_mode){
+            return false;
+        }
+        if (commandSender instanceof Player) {
+            Location spawn_location = ((Player)commandSender).getLocation();
+            Pig pig = spawn_location.getWorld().createEntity(spawn_location, Pig.class);
+            pig.registerAttribute(Attribute.SCALE);
+            pig.getAttribute(Attribute.SCALE).setBaseValue(0.3);
+            pig.spawnAt(spawn_location);
+            pig_trackerA.add(pig);
+
+                        }
+        Bukkit.getLogger().severe(pig_trackerA.toString());*/
+        return true;
+    }
+
+    private boolean run_chess(String[] args, CommandSender commandSender) {
+        if(Lobby_plugin.getInstance().passive_mode){
+            return false;
+        }
+        /*if (commandSender instanceof Player) {
+            if (commandSender == Bukkit.getPlayer(args[0])) {
+                commandSender
+                        .sendMessage("Chess isn't a singleplayer game, choose someone else who is online currently.");
+            } else if (!(Bukkit.getPlayer(args[0]) == null)) {
+                // TODO function to ask players if they want to player chess (they can accept or decline)
+                // TODO check if player is already in a chess game or another game
+                Lobby_plugin.getInstance().newChessGame((Player) commandSender, Bukkit.getPlayer(args[0]));
+            } else {
+                commandSender.sendMessage("This player isn't online");
+            }
+        } else {
+            commandSender.sendMessage("Chess game cannot be started by console. Please run this command in-game.");
+        }*/
+        return true;
+    }
+
+    private boolean give_xp(String[] args, CommandSender sender){
+        if(Lobby_plugin.getInstance().passive_mode){
+            return false;
+        }
+        if(sender instanceof Player){
+            LevelManager.giveExperience((Player) sender, Integer.parseInt(args[0]));
+            return true;
+        }
+        return false;
+    }
+
+    private boolean give_money(String[] args, CommandSender sender){
+        if(Lobby_plugin.getInstance().passive_mode){
+            return false;
+        }
+        if(sender instanceof Player){
+            LevelManager.giveMoney((Player) sender, Integer.parseInt(args[0]));
+            return true;
+        }
+        return false;
+    }
+
+    private boolean set_rank(String[] args, CommandSender sender) {
+        if (sender instanceof Player) {
+            return false;
+        }
+
+        if (args.length < 2) {
+            return false;
+        }
+
+        OfflinePlayer p = Bukkit.getServer().getOfflinePlayer(args[0]);
+
+        if(p == null){
+            return false;
+        }
+
+        if(args[1].equals("clear")){
+            LobbyDatabase.setRank(p, 0);
+            LobbyDatabase.setPayedRank(p, -1);
+        }
+
+        Ranks rank = Ranks.rankless;
+
+        for(Ranks r : Ranks.values()){
+            if(r.toString().equals(args[1])){
+                rank = r;
+            }
+        }
+
+        if(!rank.payed){
+            LobbyDatabase.setRank(p, rank.ordinal());
+        }else{
+            LobbyDatabase.setPayedRank(p, rank.ordinal());
+        }
+
+        if(p.isOnline() && !Lobby_plugin.getInstance().passive_mode) {
+            Ranks.renderTabList(p.getPlayer());
+            Nametag.reloadNametag(p.getPlayer());
+            p.getPlayer().getInventory().clear();
+            InventoryManager.giveLobbyItems(p.getPlayer());
+        }
+
+        LobbyDatabase.setQuestRerolls(p);
+        return true;
+    }
+
+    private boolean spawn(CommandSender sender){
+        if(!(sender instanceof Player)){
+            return false;
+        }
+
+        if(Lobby_plugin.getInstance().passive_mode){
+            return false;
+        }
+
+        ((Player)sender).teleport(LobbyConfig.Locations.get("spawn"), TeleportFlag.EntityState.RETAIN_PASSENGERS);
+        return true;
+    }
+
+    private boolean reload_cosmetics(CommandSender sender){
+        if(!sender.isOp()){
+            return false;
+        }
+        Cosmetic.cosmetics.clear();
+        Cosmetic.createCosmetics();
+        return true;
+    }
+
+    private boolean reload_achievements(CommandSender sender){
+        if(!sender.isOp()){
+            return false;
+        }
+        Achievement.templates.clear();
+        Achievement.achievements.clear();
+        Achievement.getAchievementsFromJson();
+        for(Player p : Bukkit.getOnlinePlayers()){
+            if(!LobbyDatabase.isPlayerInDatabase(p)){
+                Achievement.createNewAchievements(p);
+                continue;
+            }
+            Achievement.getFromDatabase(p);
+        }
+        return true;
+    }
+
+    private boolean give_cosmetic(String[] args, CommandSender sender){
+        if(!sender.isOp()) return false;
+        if(!(args[0] instanceof String) || args[0] == null) return false;
+        Player p = Bukkit.getPlayer(args[0]);
+        Cosmetic cosmetic = null;
+        for(Cosmetic c : Cosmetic.cosmetics){
+            if(c.id == Integer.parseInt(args[1])){
+                cosmetic = c;
+                break;
+            }
+        }
+        if(cosmetic == null) return false;
+        LobbyDatabase.addCosmetic(p, cosmetic, false);
+        return true;
+    }
+}
