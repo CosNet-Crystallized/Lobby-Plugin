@@ -35,7 +35,7 @@ import static net.kyori.adventure.text.format.TextDecoration.BOLD;
 public class Leaderboards {
 	public static final String LS_URL = "jdbc:sqlite:" + System.getProperty("user.home") + "/databases/litestrike_db.sql";
 	public static final String KO_URL = "jdbc:sqlite:" + System.getProperty("user.home") + "/databases/knockoff_db.sql";
-	public static final String CB_URL = "jdbc:sqlite:" + System.getProperty("user.home") + "/databases/crystalblitz_db.sql";
+	public static final String CR_URL = "jdbc:sqlite:" + System.getProperty("user.home") + "/databases/crystalblitz_db.sql";
 
 	public Leaderboards() {
 		//new WinLeaderboard("ko");
@@ -255,9 +255,9 @@ class WinLeaderboard {
 	}
 
 	enum GameType{
-		LS("ls", Leaderboards.LS_URL, "LsGamesPlayers", "was_winner", text("LITESTRIKE\n").color(GREEN).decoration(BOLD, true)),
-		KO("ko", Leaderboards.KO_URL, "KoGamesPlayers", "games_won", text("KNOCKOFF\n").color(GOLD).decoration(BOLD, true)),
-		CB("cb", Leaderboards.CB_URL, "CbGamesPlayers", "games_won", text("CRYSTAL BLITZ\n").color(LIGHT_PURPLE).decoration(BOLD, true));
+		LS("ls", Leaderboards.LS_URL, "LsGamesPlayers", "was_winner", text("LIGHTSTRIKE\n").color(GREEN).decoration(BOLD, true)),
+		KO("ko", Leaderboards.KO_URL, "KoGamesPlayers", "games_won", text("KNOCKOUT\n").color(GOLD).decoration(BOLD, true)),
+		CR("cb", Leaderboards.CR_URL, "CbGamesPlayers", "games_won", text("CRYSTAL RUSH\n").color(LIGHT_PURPLE).decoration(BOLD, true));
 
 		final String key;
 		final String url;
