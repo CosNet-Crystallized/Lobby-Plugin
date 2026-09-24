@@ -49,7 +49,7 @@ public class ScoreboardManager {
         obj.getScore("1").customName(text(" "));
 
         obj.getScore("0").setScore(0);
-        obj.getScore("0").customName(text("crystalized.cc ").color(TextColor.color(0xc4b50a)).append(text("(lobby)").color(NamedTextColor.GRAY)));
+        obj.getScore("0").customName(text("cosnet.cc ").color(TextColor.color(0xc4b50a)).append(text("(lobby)").color(NamedTextColor.GRAY)));
 
         Team CurrencyCounter = s.registerNewTeam("CurrencyCounter");
         CurrencyCounter.addEntry("5");
